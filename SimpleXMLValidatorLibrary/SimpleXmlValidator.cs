@@ -81,24 +81,26 @@
 
     public class SimpleXmlValidator
     {
-        public static bool BlockIsMatch (XmlBlock openBlock, XmlBlock closeBlock) {
+        public static bool BlockIsMatch (XmlBlock openBlock, XmlBlock closeBlock, bool noAttribute) {
             // Check if tag name is matchs.
             if (openBlock.TagName != closeBlock.TagName) {
                 return false;
             }
             // Check if attributes are matched.
-            if (openBlock.Attributes.Count != closeBlock.Attributes.Count) {
-                return false;
-            }
-            foreach(var kvp in closeBlock.Attributes) {
-                if (!openBlock.Attributes.TryGetValue(kvp.Key, out var value) || !value.Equals(kvp.Value)) {
+            if (!noAttribute) {
+                if (openBlock.Attributes.Count != closeBlock.Attributes.Count) {
                     return false;
+                }
+                foreach(var kvp in closeBlock.Attributes) {
+                    if (!openBlock.Attributes.TryGetValue(kvp.Key, out var value) || !value.Equals(kvp.Value)) {
+                        return false;
+                    }
                 }
             }
             return true;
         }
 
-		public static bool XmlParser(string xml)
+		public static bool XmlParser(string xml, bool noAttribute)
         {
             // Current string, whether block elements or content.
             string currentTagString = string.Empty;
@@ -107,9 +109,6 @@
             // Stack of Xml blocks.
             Stack<XmlBlock> blockStack = new Stack<XmlBlock>();
 
-            // Test
-            // Console.WriteLine();
-            // Console.WriteLine(xml);
             // Read XML string by character
             foreach (char currentChar in xml)
             {
@@ -131,7 +130,7 @@
                         XmlBlock openBlock = blockStack.Pop();
 
                         // Invalid if the open and close block is unmatched.
-                        if (!BlockIsMatch(openBlock, currentBlock)) {
+                        if (!BlockIsMatch(openBlock, currentBlock, noAttribute)) {
                             return false;
                         }
 
@@ -169,9 +168,9 @@
             return true;
         }
         //Please implement this method
-        public static bool DetermineXml(string xml)
+        public static bool DetermineXml(string xml, bool noAttribute)
         {
-            bool isValid = XmlParser(xml);
+            bool isValid = XmlParser(xml, noAttribute);
 
             return isValid;
         }
