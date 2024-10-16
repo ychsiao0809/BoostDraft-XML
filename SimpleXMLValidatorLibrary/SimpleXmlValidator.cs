@@ -47,9 +47,10 @@
             this.Content = content;
         }
     }
+
     public class SimpleXmlValidator
     {
-		public static void XmlParser(string xml)
+		public static bool XmlParser(string xml)
         {
             // Current string, whether block elements or content.
             string currentString = string.Empty;
@@ -63,8 +64,6 @@
                 {
                     if (!string.IsNullOrWhiteSpace(currentString))
                     {
-                        // Print if there has content before new block starts.
-                        Console.WriteLine(string.Format($"Content: {currentString}"));
                         currentString = string.Empty;
                     }
                 }
@@ -73,15 +72,15 @@
                     // Initial XML block, including tag, attributes, and block type
                     XmlBlock currentBlock = new XmlBlock(currentString.Split(' '));
 
-                    // Test if block type and tag name correct.
-                    Console.WriteLine($"{currentBlock.BlockType.ToString()} block: {currentBlock.TagName}");
-
                     if (currentBlock.BlockType == XmlBlock.XmlBlockType.Close) // close block
                     {
                         // Pop the latest open block.
                         string startTagName = tagStack.Pop();
 
-                        // Todo: check if the open block and close block match.
+                        // Invalid if the open and close block is unmatched.
+                        if (startTagName != currentBlock.TagName) {
+                            return false;
+                        }
                     }
                     else if (currentBlock.BlockType == XmlBlock.XmlBlockType.Open) // open block
                     {
@@ -96,13 +95,20 @@
                     currentString += currentChar;
                 }
             }
+
+            // Invalid if tagStack is not empty.
+            if(tagStack.Count != 0) {
+                return false;
+            }
+
+            return true;
         }
         //Please implement this method
         public static bool DetermineXml(string xml)
         {
-            XmlParser(xml);
+            bool isValid = XmlParser(xml);
 
-            return true;
+            return isValid;
         }
     }
 }
