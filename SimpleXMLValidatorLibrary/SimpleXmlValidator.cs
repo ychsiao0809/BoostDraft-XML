@@ -60,27 +60,6 @@
             this.Content = content;
         }
 
-        public bool BlockIsMatch (XmlBlock openBlock) {
-            // Check if blockType is Open.
-            if (openBlock.BlockType != XmlBlockType.Open) {
-                return false;
-            }
-            // Check if tag name is matchs.
-            if (openBlock.TagName != this.TagName) {
-                return false;
-            }
-            // Check if attributes are matched.
-            if (openBlock.Attributes.Count != this.Attributes.Count) {
-                return false;
-            }
-            foreach(var kvp in this.Attributes) {
-                if (!openBlock.Attributes.TryGetValue(kvp.Key, out var value) || !value.Equals(kvp.Value)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
         public void ShowBlockInfo() {
             // Show tag name, block type
             Console.WriteLine($"Tag: {this.TagName}, Type: {this.BlockType}");
@@ -102,6 +81,23 @@
 
     public class SimpleXmlValidator
     {
+        public static bool BlockIsMatch (XmlBlock openBlock, XmlBlock closeBlock) {
+            // Check if tag name is matchs.
+            if (openBlock.TagName != closeBlock.TagName) {
+                return false;
+            }
+            // Check if attributes are matched.
+            if (openBlock.Attributes.Count != closeBlock.Attributes.Count) {
+                return false;
+            }
+            foreach(var kvp in closeBlock.Attributes) {
+                if (!openBlock.Attributes.TryGetValue(kvp.Key, out var value) || !value.Equals(kvp.Value)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
 		public static bool XmlParser(string xml)
         {
             // Current string, whether block elements or content.
@@ -135,7 +131,7 @@
                         XmlBlock openBlock = blockStack.Pop();
 
                         // Invalid if the open and close block is unmatched.
-                        if (!currentBlock.BlockIsMatch(openBlock)) {
+                        if (!BlockIsMatch(openBlock, currentBlock)) {
                             return false;
                         }
 
