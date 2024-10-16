@@ -14,6 +14,20 @@ class Program
             ("<Design><Code>hello world</Code></Design><People>", false),//no closing tag for "People" 
             ("<People><Design><Code>hello world</People></Code></Design>", false),// "/Code" should come before "/People" 
             ("<People age=”1”>hello world</People>", false),//there is no closing tag for "People age=”1”" and no opening tag for "/People"
+            (@"<?xml version=""1.0"" encoding=""UTF-8""?>
+                <books>
+                    <book id=""1"">
+                        <title>Hello C#</title>
+                        <author>David Hsiao</author>
+                        <price>199.9</price>
+                    </book>
+                    <book id=""2"">
+                        <title>Hello XML</title>
+                        <author>Hsiao David</author>
+                        <price>299.9</price>
+                    </book>
+                </books>", false),// My test case
+            
         };
         int failedCount = 0;
         foreach ((string input, bool expected) in testCases)
