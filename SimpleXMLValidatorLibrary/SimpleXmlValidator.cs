@@ -1,6 +1,11 @@
 ﻿namespace SimpleXMLValidatorLibrary
 {
-	//feel free to add other classes/methods if you want
+    // Customized exception: when a syntax error occurs while setting key and value of attributes
+    class InvalidAttributeException: Exception {
+        public InvalidAttributeException(string message) : base(message) {            
+        }
+    }
+    
     public class XmlBlock {
         public enum XmlBlockType {
             Open, // Represent an opening tag, e.g. <book>
@@ -11,15 +16,29 @@
         // Properties to hold the tag name, attributes, content, and block type
         public string TagName { get; set; }
         public Dictionary<string, string> Attributes { get; set; }
-        public string? Content { get; set; }
+        public string? Content { get; set; } // Content should stored at close block.
         public XmlBlockType BlockType { get; set; }
+
+        public static void AttributeParser (ref Dictionary<string, string> attributes, string[] elements) {
+            for (int i = 1; i < elements.Length; i++) { // First element is tag name, skip it.
+                int position = elements[i].IndexOf("=");
+                string key = elements[i].Substring(0, position);
+                string value = elements[i].Substring(position+1);
+
+                // Check if value is quoted
+
+                attributes.Add(key, value);
+            }
+            // Todo: throw error when there is syntax error in the attribute
+            // throw new InvalidAttributeException("Syntax error occurs: Attribute values must always be quoted");
+        }
 
         public XmlBlock (string[] elements) {
             string tagName = elements[0];
             XmlBlockType blockType;
             Dictionary<string, string> attributes = new Dictionary<string, string>();
 
-            if (tagName == "?xml") {
+            if (tagName == "xml") {
                 blockType = XmlBlockType.Xml;
             } else if (tagName.StartsWith("/")) {
                 tagName = tagName.Substring(1, tagName.Length-1);
@@ -28,13 +47,7 @@
                 blockType = XmlBlockType.Open;
             }
             // Get attributes
-            for (int i = 1; i < elements.Length; i++) {
-                int position = elements[i].IndexOf("=");
-                string key = elements[i].Substring(0, position);
-                string value = elements[i].Substring(position+1);
-
-                attributes.Add(key, value);
-            }
+            AttributeParser(ref attributes, elements);
 
             // Set properties
             this.TagName = tagName;
@@ -43,8 +56,47 @@
             this.Content = null;
         }
 
-        public void setContent (string content) {
+        public void SetContent (string content) {
             this.Content = content;
+        }
+
+        public bool BlockIsMatch (XmlBlock openBlock) {
+            // Check if blockType is Open.
+            if (openBlock.BlockType != XmlBlockType.Open) {
+                return false;
+            }
+            // Check if tag name is matchs.
+            if (openBlock.TagName != this.TagName) {
+                return false;
+            }
+            // Check if attributes are matched.
+            if (openBlock.Attributes.Count != this.Attributes.Count) {
+                return false;
+            }
+            foreach(var kvp in this.Attributes) {
+                if (!openBlock.Attributes.TryGetValue(kvp.Key, out var value) || !value.Equals(kvp.Value)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public void ShowBlockInfo() {
+            // Show tag name, block type
+            Console.WriteLine($"Tag: {this.TagName}, Type: {this.BlockType}");
+
+            // Show attributes
+            if (this.Attributes.Count != 0) {
+                Console.WriteLine("Attributes:");
+                foreach(var kv in this.Attributes) {
+                    Console.WriteLine($"  - {kv.Key}: {kv.Value}");
+                }
+            }
+
+            // Show content.
+            if (!string.IsNullOrWhiteSpace(this.Content)) {
+                Console.WriteLine($"Content: {this.Content}");
+            }
         }
     }
 
@@ -53,51 +105,68 @@
 		public static bool XmlParser(string xml)
         {
             // Current string, whether block elements or content.
-            string currentString = string.Empty;
-            // Stack the start tags.
-            Stack<string> tagStack = new Stack<string>();
+            string currentTagString = string.Empty;
+            string currentContent = string.Empty;
+            bool inTag = false;
+            // Stack of Xml blocks.
+            Stack<XmlBlock> blockStack = new Stack<XmlBlock>();
 
+            // Test
+            // Console.WriteLine();
+            // Console.WriteLine(xml);
             // Read XML string by character
             foreach (char currentChar in xml)
             {
                 if (currentChar == '<') // start of block
                 {
-                    if (!string.IsNullOrWhiteSpace(currentString))
-                    {
-                        currentString = string.Empty;
-                    }
+                    inTag = true;
                 }
                 else if (currentChar == '>') // end of block
                 {
-                    // Initial XML block, including tag, attributes, and block type
-                    XmlBlock currentBlock = new XmlBlock(currentString.Split(' '));
+                    inTag = false;
+                    // Initial XML block, including tag, attributes, and block type.
+                    // Remove space and '?' in both ends.
+                    // Have to remove '?' or it may occurs error when attribute parsing
+                    XmlBlock currentBlock = new XmlBlock(currentTagString.Trim().Trim('?').Split(' '));                    
 
                     if (currentBlock.BlockType == XmlBlock.XmlBlockType.Close) // close block
                     {
                         // Pop the latest open block.
-                        string startTagName = tagStack.Pop();
+                        XmlBlock openBlock = blockStack.Pop();
 
                         // Invalid if the open and close block is unmatched.
-                        if (startTagName != currentBlock.TagName) {
+                        if (!currentBlock.BlockIsMatch(openBlock)) {
                             return false;
+                        }
+
+                        // Store content in close block
+                        if (!string.IsNullOrWhiteSpace(currentContent))
+                        {
+                            currentBlock.SetContent(currentContent);
+                            currentContent = string.Empty;
                         }
                     }
                     else if (currentBlock.BlockType == XmlBlock.XmlBlockType.Open) // open block
                     {
                         // Push open block tag name to the tag stack.
-                        tagStack.Push(currentBlock.TagName);
+                        blockStack.Push(currentBlock);
                     }
-                    // Refresh content
-                    currentString = string.Empty;
+                    currentTagString = string.Empty; // Refresh tag string
+
+                    // Show block info for test
+                    // currentBlock.ShowBlockInfo();
                 }
-                else // Get content
+                else if (inTag) // Get Tag
                 {
-                    currentString += currentChar;
+                    currentTagString += currentChar;
+                }
+                else { // Get Content
+                    currentContent += currentChar;
                 }
             }
 
-            // Invalid if tagStack is not empty.
-            if(tagStack.Count != 0) {
+            // Invalid if blockStack is not empty.
+            if(blockStack.Count != 0) {
                 return false;
             }
 
