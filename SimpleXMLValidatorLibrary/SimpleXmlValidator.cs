@@ -126,6 +126,11 @@
 
                     if (currentBlock.BlockType == XmlBlock.XmlBlockType.Close) // close block
                     {
+                        // If there is no open block, return false.
+                        if (blockStack.Count == 0) {
+                            return false;
+                        }
+
                         // Pop the latest open block.
                         XmlBlock openBlock = blockStack.Pop();
 
