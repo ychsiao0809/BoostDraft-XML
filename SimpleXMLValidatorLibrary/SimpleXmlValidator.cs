@@ -1,6 +1,52 @@
 ﻿namespace SimpleXMLValidatorLibrary
 {
 	//feel free to add other classes/methods if you want
+    public class XmlBlock {
+        public enum XmlBlockType {
+            Open, // Represent an opening tag, e.g. <book>
+            Close, // Represent a closing tag, e.g. </book>
+            Xml, // Represent the XML header, e.g. <?xml version="1.0"?>
+        };
+
+        // Properties to hold the tag name, attributes, content, and block type
+        public string TagName { get; set; }
+        public Dictionary<string, string> Attributes { get; set; }
+        public string? Content { get; set; }
+        public XmlBlockType BlockType { get; set; }
+
+        public XmlBlock (string[] elements) {
+            string tagName = elements[0];
+            XmlBlockType blockType;
+            Dictionary<string, string> attributes = new Dictionary<string, string>();
+
+            if (tagName == "?xml") {
+                blockType = XmlBlockType.Xml;
+            } else if (tagName.StartsWith("/")) {
+                tagName = tagName.Substring(1, tagName.Length-1);
+                blockType = XmlBlockType.Close;
+            } else {
+                blockType = XmlBlockType.Open;
+            }
+            // Get attributes
+            for (int i = 1; i < elements.Length; i++) {
+                int position = elements[i].IndexOf("=");
+                string key = elements[i].Substring(0, position);
+                string value = elements[i].Substring(position+1);
+
+                attributes.Add(key, value);
+            }
+
+            // Set properties
+            this.TagName = tagName;
+            this.BlockType = blockType;
+            this.Attributes = attributes;
+            this.Content = null;
+        }
+
+        public void setContent (string content) {
+            this.Content = content;
+        }
+    }
     public class SimpleXmlValidator
     {
 		public static void XmlParser(string xml)
@@ -13,7 +59,7 @@
             // Read XML string by character
             foreach (char currentChar in xml)
             {
-                if (currentChar == '<') // open block
+                if (currentChar == '<') // start of block
                 {
                     if (!string.IsNullOrWhiteSpace(currentString))
                     {
@@ -22,27 +68,25 @@
                         currentString = string.Empty;
                     }
                 }
-                else if (currentChar == '>') // close block
+                else if (currentChar == '>') // end of block
                 {
-                    // Get elements in block, including tag and attributes.
-                    string[] elements = currentString.Split(' ');
-                    // Tag name of block.
-                    string tagName = elements[0];
+                    // Initial XML block, including tag, attributes, and block type
+                    XmlBlock currentBlock = new XmlBlock(currentString.Split(' '));
 
-                    if (tagName == "?xml") // XML block
+                    // Test if block type and tag name correct.
+                    Console.WriteLine($"{currentBlock.BlockType.ToString()} block: {currentBlock.TagName}");
+
+                    if (currentBlock.BlockType == XmlBlock.XmlBlockType.Close) // close block
                     {
-                        Console.WriteLine("XML header");
-                    }
-                    else if (tagName.StartsWith("/")) // end block
-                    {
-                        tagName = tagName.Substring(1, tagName.Length-1);
+                        // Pop the latest open block.
                         string startTagName = tagStack.Pop();
-                        Console.WriteLine($"End tag: {tagName}");
+
+                        // Todo: check if the open block and close block match.
                     }
-                    else // start block
+                    else if (currentBlock.BlockType == XmlBlock.XmlBlockType.Open) // open block
                     {
-                        tagStack.Push(tagName);
-                        Console.WriteLine($"Start tag: {tagName}");
+                        // Push open block tag name to the tag stack.
+                        tagStack.Push(currentBlock.TagName);
                     }
                     // Refresh content
                     currentString = string.Empty;
