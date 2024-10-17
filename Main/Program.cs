@@ -5,9 +5,15 @@ class Program
     static void Main(string[] args)
     {
 #if DEBUG
-        // True if needs to compare attributes between start/end block; False if no needs.
-        if (args.Length != 0 && args[0] == "--no-attr") {
-            SimpleXmlValidator.SetNoAttribute();
+        bool quiet = false;
+        if (args.Length != 0) {
+            foreach(string arg in args) {
+                if (arg == "--no-attr") { // if needs to compare attributes between start/end block
+                    SimpleXmlValidator.SetNoAttribute();
+                } else if (arg == "--quiet") { // Display the result as example number instead of the entire xml string.
+                    quiet = true;
+                }
+            }
         }
         // You can use here to test, feel free to modify/add the test cases here.
         // You can also use other ways to test if you want.
@@ -37,6 +43,7 @@ class Program
             
         };
         int failedCount = 0;
+        int lineID = 1; // Line number of testCases
         foreach ((string input, bool expected, bool expected_noAttr) in testCases)
         {
             // Set noAttribute to check whether should compare attributes
@@ -53,7 +60,11 @@ class Program
                 mark = "NG ";
                 failedCount++;
             }
-            Console.WriteLine($"{mark} {input}: {resultStr}");
+            if (quiet) {
+                Console.WriteLine($"{mark} Example {lineID++}: {resultStr}");
+            } else {
+                Console.WriteLine($"{mark} {input}: {resultStr}");
+            }
         }
         Console.WriteLine($"Result: {testCases.Count - failedCount}/{testCases.Count}");
 #else
