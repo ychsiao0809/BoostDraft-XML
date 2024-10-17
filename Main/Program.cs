@@ -20,13 +20,13 @@ class Program
 
         List<(string testCase, bool expectedResult, bool expectedResult_noAttr)> testCases = new()
         {
-            ("<Design><Code>hello world</Code></Design>",  true, true),//normal case
-            ("<Design><Code>hello world</Code></Design><People>", false, false),//no closing tag for "People"            
-            ("<Design><Code>hello world</Code></Design></People>", false, false),//no opening tag for "People"
+            ("<Design><Code>hello world</Code></Design>",  true, true),// correct case
+            ("<Design><Code>hello world</Code></Design><People>", false, false),// no closing tag for "People"      
+            ("<Design><Code>hello world</Code></Design></People>", false, false),// no opening tag for "People"
             ("<People><Design><Code>hello world</People></Code></Design>", false, false),// "/Code" should come before "/People" 
-            ("<People age=”1”>hello world</People>", false, false),//there is no closing tag for "People age=”1”" and the colons of quoted value should be halfwidth colons            
-            (@"<People age=""1"">hello world</People>", false, true),//there is no closing tag for "People age=”1”" and no opening tag for "/People"
-            (@"<People age=""1"">hello world</People age=""1"">", true, true),
+            ("<People age=”1”>hello world</People>", false, false),// no attribute "age=”1”" for closing tag "</People>" and the colons of quoted value should be halfwidth colons            
+            (@"<People age=""1"">hello world</People>", false, true),// no attribute "age="1"" for closing tag "</People>" / correct
+            (@"<People age=""1"">hello world</People age=""1"">", true, true), // correct case
             (@"<?xml version=""1.0"" encoding=""UTF-8""?>
                 <books>
                     <book id=""1"">
@@ -39,7 +39,7 @@ class Program
                         <author>Hsiao David</author>
                         <price>299.9</price>
                     </book>
-                </books>", false, true),// My test case
+                </books>", false, true), // no attributes at every closing tag / correct
             
         };
         int failedCount = 0;
