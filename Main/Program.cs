@@ -18,7 +18,8 @@ class Program
             ("<Design><Code>hello world</Code></Design><People>", false, false),//no closing tag for "People"            
             ("<Design><Code>hello world</Code></Design></People>", false, false),//no opening tag for "People"
             ("<People><Design><Code>hello world</People></Code></Design>", false, false),// "/Code" should come before "/People" 
-            ("<People age=”1”>hello world</People>", false, true),//there is no closing tag for "People age=”1”" and no opening tag for "/People"
+            ("<People age=”1”>hello world</People>", false, false),//there is no closing tag for "People age=”1”" and the colons of quoted value should be halfwidth colons            
+            (@"<People age=""1"">hello world</People>", false, true),//there is no closing tag for "People age=”1”" and no opening tag for "/People"
             (@"<People age=""1"">hello world</People age=""1"">", true, true),
             (@"<?xml version=""1.0"" encoding=""UTF-8""?>
                 <books>
