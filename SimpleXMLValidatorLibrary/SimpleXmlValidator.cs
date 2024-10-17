@@ -5,14 +5,65 @@
         public InvalidAttributeException(string message) : base(message) {            
         }
     }
+
+    public enum XmlBlockType {
+        Open, // Represent an opening tag, e.g. <book>
+        Close, // Represent a closing tag, e.g. </book>
+        Xml, // Represent the XML header, e.g. <?xml version="1.0"?>
+    };
+
+    interface IParsable<T> {
+        T Parse(string elements);
+    }
+
+    class TagParser : IParsable<Tuple<string, Dictionary<string, string>, XmlBlockType>> {
+        // Retrun tag name, attributes, block type
+        public Tuple<string, Dictionary<string, string>, XmlBlockType> Parse(string tagString) {
+            // Initailize tag name, attributes, block type
+            string tagName = string.Empty;
+            Dictionary<string, string> attributes = new Dictionary<string, string>();
+            XmlBlockType blockType;
+
+            // Remove space and '?' in both ends.
+            // Have to remove '?' or it may occurs error when attribute parsing
+            tagString = tagString.Trim().Trim('?');
+            // Divide the tag part and attribute part.
+            string[] parts = tagString.Split(' ', 2);
+
+            tagName = parts[0]; // Get tag name
+
+            // Get Xml block type
+            if (tagName == "xml") {
+                blockType = XmlBlockType.Xml;
+            } else if (tagName.StartsWith("/")) {
+                tagName = tagName.Trim('/');
+                blockType = XmlBlockType.Close;
+            } else {
+                blockType = XmlBlockType.Open;
+            }
+
+            if (parts.Length > 1) {
+                // Parse attribute part.
+                foreach(var element in parts[1].Split(' ')) {
+                    // Get key and value
+                    int position = element.IndexOf("=");
+                    string key = element.Substring(0, position);
+                    string value = element.Substring(position+1);
+
+                    // Check if value is quoted
+                    if (value.StartsWith("\"") && value.EndsWith("\"")) {
+                        value = value.Trim('\"'); // Remove quotes.
+                    } // Todo: return syntax error
+
+                    attributes.Add(key, value);
+                }
+            }
+
+            return Tuple.Create(tagName, attributes, blockType);
+        }
+    }
     
     public class XmlBlock {
-        public enum XmlBlockType {
-            Open, // Represent an opening tag, e.g. <book>
-            Close, // Represent a closing tag, e.g. </book>
-            Xml, // Represent the XML header, e.g. <?xml version="1.0"?>
-        };
-
         // Properties to hold the tag name, attributes, content, and block type
         public string TagName { get; set; }
         public Dictionary<string, string> Attributes { get; set; }
@@ -33,26 +84,16 @@
             // throw new InvalidAttributeException("Syntax error occurs: Attribute values must always be quoted");
         }
 
-        public XmlBlock (string[] elements) {
-            string tagName = elements[0];
-            XmlBlockType blockType;
-            Dictionary<string, string> attributes = new Dictionary<string, string>();
+        public XmlBlock (string tagString) {
+            // Parse tag name, attributes, block type by tagParser
+            TagParser tagParser = new TagParser();
 
-            if (tagName == "xml") {
-                blockType = XmlBlockType.Xml;
-            } else if (tagName.StartsWith("/")) {
-                tagName = tagName.Substring(1, tagName.Length-1);
-                blockType = XmlBlockType.Close;
-            } else {
-                blockType = XmlBlockType.Open;
-            }
-            // Get attributes
-            AttributeParser(ref attributes, elements);
+            (string tagName, Dictionary<string, string> attributes, XmlBlockType blockType) = tagParser.Parse(tagString);
 
             // Set properties
             this.TagName = tagName;
-            this.BlockType = blockType;
             this.Attributes = attributes;
+            this.BlockType = blockType;
             this.Content = null;
         }
 
@@ -122,9 +163,9 @@
                     // Initial XML block, including tag, attributes, and block type.
                     // Remove space and '?' in both ends.
                     // Have to remove '?' or it may occurs error when attribute parsing
-                    XmlBlock currentBlock = new XmlBlock(currentTagString.Trim().Trim('?').Split(' '));                    
+                    XmlBlock currentBlock = new XmlBlock(currentTagString);                    
 
-                    if (currentBlock.BlockType == XmlBlock.XmlBlockType.Close) // close block
+                    if (currentBlock.BlockType == XmlBlockType.Close) // close block
                     {
                         // If there is no open block, return false.
                         if (blockStack.Count == 0) {
@@ -146,7 +187,7 @@
                             currentContent = string.Empty;
                         }
                     }
-                    else if (currentBlock.BlockType == XmlBlock.XmlBlockType.Open) // open block
+                    else if (currentBlock.BlockType == XmlBlockType.Open) // open block
                     {
                         // Push open block tag name to the tag stack.
                         blockStack.Push(currentBlock);
