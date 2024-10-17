@@ -53,7 +53,9 @@
                     // Check if value is quoted
                     if (value.StartsWith("\"") && value.EndsWith("\"")) {
                         value = value.Trim('\"'); // Remove quotes.
-                    } // Todo: return syntax error
+                    } else {
+                        throw new InvalidAttributeException("The value should be quoted by halfwidth colon");
+                    }
 
                     attributes.Add(key, value);
                 }
@@ -192,7 +194,14 @@
             List<XmlBlock> xmlBlocks; // List of all Xml blocks
             Stack<XmlBlock> openBlockStack = new Stack<XmlBlock>(); // Stack of Xml open blocks.
 
-            xmlBlocks = xmlParser.Parse(xml); // Get Xml blocks information.
+            // Syntax error handling: value of attributes should be quoted by halfwidth colon.
+            try {
+                xmlBlocks = xmlParser.Parse(xml); // Get Xml blocks information.
+            } catch (InvalidAttributeException ex) {
+                // Console.WriteLine(ex.Message);
+                return false;
+            }
+
 
             // Read XML string by character
             foreach (XmlBlock xmlBlock in xmlBlocks)
