@@ -6,9 +6,8 @@ class Program
     {
 #if DEBUG
         // True if needs to compare attributes between start/end block; False if no needs.
-        bool noAttribute = false;
         if (args.Length != 0 && args[0] == "--no-attr") {
-            noAttribute = true;
+            SimpleXmlValidator.SetNoAttribute();
         }
         // You can use here to test, feel free to modify/add the test cases here.
         // You can also use other ways to test if you want.
@@ -40,11 +39,11 @@ class Program
         foreach ((string input, bool expected, bool expected_noAttr) in testCases)
         {
             // Set noAttribute to check whether should compare attributes
-            bool result = SimpleXmlValidator.DetermineXml(input, noAttribute);
+            bool result = SimpleXmlValidator.DetermineXml(input);
             string resultStr = result ? "Valid" : "Invalid";
 
             string mark;
-            if ((result == expected && !noAttribute) || (result == expected_noAttr && noAttribute))
+            if ((result == expected && !SimpleXmlValidator.GetNoAttribute()) || (result == expected_noAttr && SimpleXmlValidator.GetNoAttribute()))
             {
                 mark = "OK ";
             }
