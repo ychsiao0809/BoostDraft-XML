@@ -5,22 +5,28 @@ class Program
     static void Main(string[] args)
     {
 #if DEBUG
-        // True if needs to compare attributes between start/end block; False if no needs.
-        if (args.Length != 0 && args[0] == "--no-attr") {
-            SimpleXmlValidator.SetNoAttribute();
+        bool quiet = false;
+        if (args.Length != 0) {
+            foreach(string arg in args) {
+                if (arg == "--no-attr") { // if needs to compare attributes between start/end block
+                    SimpleXmlValidator.SetNoAttribute();
+                } else if (arg == "--quiet") { // Display the result as example number instead of the entire xml string.
+                    quiet = true;
+                }
+            }
         }
         // You can use here to test, feel free to modify/add the test cases here.
         // You can also use other ways to test if you want.
 
         List<(string testCase, bool expectedResult, bool expectedResult_noAttr)> testCases = new()
         {
-            ("<Design><Code>hello world</Code></Design>",  true, true),//normal case
-            ("<Design><Code>hello world</Code></Design><People>", false, false),//no closing tag for "People"            
-            ("<Design><Code>hello world</Code></Design></People>", false, false),//no opening tag for "People"
+            ("<Design><Code>hello world</Code></Design>",  true, true),// correct case
+            ("<Design><Code>hello world</Code></Design><People>", false, false),// no closing tag for "People"      
+            ("<Design><Code>hello world</Code></Design></People>", false, false),// no opening tag for "People"
             ("<People><Design><Code>hello world</People></Code></Design>", false, false),// "/Code" should come before "/People" 
-            ("<People age=”1”>hello world</People>", false, false),//there is no closing tag for "People age=”1”" and the colons of quoted value should be halfwidth colons            
-            (@"<People age=""1"">hello world</People>", false, true),//there is no closing tag for "People age=”1”" and no opening tag for "/People"
-            (@"<People age=""1"">hello world</People age=""1"">", true, true),
+            ("<People age=”1”>hello world</People>", false, false),// no attribute "age=”1”" for closing tag "</People>" and the colons of quoted value should be halfwidth colons            
+            (@"<People age=""1"">hello world</People>", false, true),// no attribute "age="1"" for closing tag "</People>" / correct
+            (@"<People age=""1"">hello world</People age=""1"">", true, true), // correct case
             (@"<?xml version=""1.0"" encoding=""UTF-8""?>
                 <books>
                     <book id=""1"">
@@ -33,10 +39,11 @@ class Program
                         <author>Hsiao David</author>
                         <price>299.9</price>
                     </book>
-                </books>", false, true),// My test case
+                </books>", false, true), // no attributes at every closing tag / correct
             
         };
         int failedCount = 0;
+        int lineID = 1; // Line number of testCases
         foreach ((string input, bool expected, bool expected_noAttr) in testCases)
         {
             // Set noAttribute to check whether should compare attributes
@@ -53,7 +60,11 @@ class Program
                 mark = "NG ";
                 failedCount++;
             }
-            Console.WriteLine($"{mark} {input}: {resultStr}");
+            if (quiet) {
+                Console.WriteLine($"{mark} Example {lineID++}: {resultStr}");
+            } else {
+                Console.WriteLine($"{mark} {input}: {resultStr}");
+            }
         }
         Console.WriteLine($"Result: {testCases.Count - failedCount}/{testCases.Count}");
 #else
