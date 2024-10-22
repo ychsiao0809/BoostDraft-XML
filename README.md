@@ -30,18 +30,6 @@ Implement an XMLparser capable of parsing XML string.
 
 ### Todo
 
-### Summary
-
-Implement an XMLparser capable of parsing XML string.
-
-### Changes
-
-- Implement `XmlParser` in `SimpleXmlValidator` for parsing xml blocks.
-- Identifying start tags and end tags within the blocks.
-- Handling and distinguishing the XML header from tag.
-
-### Todo
-
 - Create an XML block class to manage tags, attributes, and content.
 
 ## Feature #3: Implement XML block
