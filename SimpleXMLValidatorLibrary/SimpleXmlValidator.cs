@@ -15,55 +15,6 @@
     interface IParsable<T> {
         T Parse(string elements);
     }
-
-    class TagParser : IParsable<Tuple<string, Dictionary<string, string>, XmlBlockType>> {
-        // Retrun tag name, attributes, block type
-        public Tuple<string, Dictionary<string, string>, XmlBlockType> Parse(string tagString) {
-            // Initailize tag name, attributes, block type
-            string tagName = string.Empty;
-            Dictionary<string, string> attributes = new Dictionary<string, string>();
-            XmlBlockType blockType;
-
-            // Remove space and '?' in both ends.
-            // Have to remove '?' or it may occurs error when attribute parsing
-            tagString = tagString.Trim().Trim('?');
-            // Divide the tag part and attribute part.
-            string[] parts = tagString.Split(' ', 2);
-
-            tagName = parts[0]; // Get tag name
-
-            // Get Xml block type
-            if (tagName == "xml") {
-                blockType = XmlBlockType.Xml;
-            } else if (tagName.StartsWith("/")) {
-                tagName = tagName.Substring(1, tagName.Length - 1);
-                blockType = XmlBlockType.Close;
-            } else {
-                blockType = XmlBlockType.Open;
-            }
-
-            if (parts.Length > 1) {
-                // Parse attribute part.
-                foreach(var element in parts[1].Split(' ')) {
-                    // Get key and value
-                    int position = element.IndexOf("=");
-                    string key = element.Substring(0, position);
-                    string value = element.Substring(position+1);
-
-                    // Check if value is quoted
-                    if (value.StartsWith("\"") && value.EndsWith("\"")) {
-                        value = value.Trim('\"'); // Remove quotes.
-                    } else {
-                        throw new InvalidAttributeException("The value should be quoted by halfwidth colon");
-                    }
-
-                    attributes.Add(key, value);
-                }
-            }
-
-            return Tuple.Create(tagName, attributes, blockType);
-        }
-    }
     
     class XmlParser : IParsable<List<XmlBlock>> {
         // Return list of xml blocks in xml content
@@ -121,10 +72,46 @@
         public XmlBlockType BlockType { get; set; }
 
         public XmlBlock (string tagString) {
-            // Parse tag name, attributes, block type by tagParser
-            TagParser tagParser = new TagParser();
+            string tagName = string.Empty;
+            Dictionary<string, string> attributes = new Dictionary<string, string>();
+            XmlBlockType blockType;
 
-            (string tagName, Dictionary<string, string> attributes, XmlBlockType blockType) = tagParser.Parse(tagString);
+            // Remove space and '?' in both ends.
+            // Have to remove '?' or it may occurs error when attribute parsing
+            tagString = tagString.Trim().Trim('?');
+            string[] parts = tagString.Split(' ', 2); // Divide the tag part and attribute part.
+
+            // Get tag name
+            tagName = parts[0];
+
+            // Get Xml block type
+            if (tagName == "xml") {
+                blockType = XmlBlockType.Xml;
+            } else if (tagName.StartsWith("/")) {
+                tagName = tagName.Substring(1, tagName.Length - 1);
+                blockType = XmlBlockType.Close;
+            } else {
+                blockType = XmlBlockType.Open;
+            }
+
+            // Get attributes
+            if (parts.Length > 1) {
+                foreach(var element in parts[1].Split(' ')) {
+                    // Get key and value
+                    int position = element.IndexOf("=");
+                    string key = element.Substring(0, position);
+                    string value = element.Substring(position+1);
+
+                    // Check if value is quoted
+                    if (value.StartsWith("\"") && value.EndsWith("\"")) {
+                        value = value.Trim('\"'); // Remove quotes.
+                    } else {
+                        throw new InvalidAttributeException("The value should be quoted by halfwidth colon");
+                    }
+
+                    attributes.Add(key, value);
+                }
+            }
 
             // Set properties
             this.TagName = tagName;
