@@ -36,7 +36,7 @@
             if (tagName == "xml") {
                 blockType = XmlBlockType.Xml;
             } else if (tagName.StartsWith("/")) {
-                tagName = tagName.Trim('/');
+                tagName = tagName.Substring(1, tagName.Length - 1);
                 blockType = XmlBlockType.Close;
             } else {
                 blockType = XmlBlockType.Open;

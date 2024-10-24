@@ -21,6 +21,8 @@ class Program
         List<(string testCase, bool expectedResult, bool expectedResult_noAttr)> testCases = new()
         {
             ("<Design><Code>hello world</Code></Design>",  true, true),// correct case
+            ("<Design><Code>hello world<//Code></Design>",  false, false),// correct case
+            ("<Design><Code>hello world</Code ></Design >",  true, true),// correct case
             ("<Design><Code>hello world</Code></Design><People>", false, false),// no closing tag for "People"      
             ("<Design><Code>hello world</Code></Design></People>", false, false),// no opening tag for "People"
             ("<People><Design><Code>hello world</People></Code></Design>", false, false),// "/Code" should come before "/People" 
