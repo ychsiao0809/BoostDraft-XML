@@ -19,44 +19,39 @@
     class XmlParser : IParsable<List<XmlBlock>> {
         // Return list of xml blocks in xml content
         public List<XmlBlock> Parse(string xml) {
-            List<XmlBlock> xmlBlocks = new List<XmlBlock>();
-
-            string currentTagString = string.Empty; // Store the tag string in block.
-            string currentContent = string.Empty; // Store the content string between blocks.
-            bool inTag = false; // Check if the character is in block or between blocks.
+            var xmlBlocks = new List<XmlBlock>();
+            var currentTag = string.Empty; // Store the tag string in block.
+            var currentContent = string.Empty; // Store the content string between blocks.
+            var inTag = false; // Check if the character is in block or between blocks.
 
             // Read XML string by characters
-            foreach (char currentChar in xml)
+            foreach (char ch in xml)
             {
-                if (currentChar == '<') // start of block
+                if (ch == '<') // start of block
                 {
                     inTag = true;
                 }
-                else if (currentChar == '>') // end of block
+                else if (ch == '>') // end of block
                 {
                     inTag = false;
                     // Initial XML block, including tag, attributes, and block type.
-                    XmlBlock currentBlock = new XmlBlock(currentTagString);                    
+                    var currentBlock = XmlBlockFactory.CreateXmlBlock(currentTag);                    
 
-                    if (currentBlock.BlockType == XmlBlockType.Close) // close block
+                    if (currentBlock.BlockType == XmlBlockType.Close && !string.IsNullOrWhiteSpace(currentContent)) // close block
                     {
-                        // Store content in open block
-                        if (!string.IsNullOrWhiteSpace(currentContent))
-                        {
-                            xmlBlocks[xmlBlocks.Count-1].SetContent(currentContent);
-                            currentContent = string.Empty;
-                        }
+                        xmlBlocks[^1].SetContent(currentContent);
+                        currentContent = string.Empty;
                     }
                     
                     xmlBlocks.Add(currentBlock);
-                    currentTagString = string.Empty; // Refresh tag string
+                    currentTag = string.Empty; // Refresh tag string
                 }
                 else if (inTag) // Get Tag
                 {
-                    currentTagString += currentChar;
+                    currentTag += ch;
                 }
                 else { // Get Content
-                    currentContent += currentChar;
+                    currentContent += ch;
                 }
             }
 
@@ -64,83 +59,70 @@
         }
     }
 
+    public static class XmlBlockFactory
+    {
+        public static XmlBlock CreateXmlBlock(string tagString)
+        {
+            tagString = tagString.Trim().Trim('?');
+            var parts = tagString.Split(' ', 2);
+            var tagName = parts[0];
+            var blockType = XmlBlockType.Open;
+
+            // Get Xml block type
+            if (tagName == "xml")  blockType = XmlBlockType.Xml;
+            else if (tagName.StartsWith("/"))
+            {
+                tagName = tagName[1..]; // remove first '/'
+                blockType = XmlBlockType.Close;
+            }
+
+            // Get attributes
+            var attributes = parts.Length > 1 ? XmlAttributeParser.ParseAttributes(parts[1]) : new Dictionary<string, string>();
+            
+            return new XmlBlock(tagName, attributes, blockType);
+        }
+    }
+
+    public static class XmlAttributeParser
+    {
+        public static Dictionary<string, string> ParseAttributes(string attributeString) {
+            var attributes = new Dictionary<string, string>();
+
+            foreach(var element in attributeString.Split(' '))
+            {
+                // Get key and value
+                int position = element.IndexOf("=");
+                string key = element[..position];
+                string value = element[(position+1)..];
+
+                // Check if value is quoted
+                if (value.StartsWith("\"") && value.EndsWith("\"")) {
+                    value = value.Trim('\"'); // Remove quotes.
+                } else {
+                    throw new InvalidAttributeException("The value should be quoted by halfwidth colon");
+                }
+
+                attributes.Add(key, value);
+            }
+
+            return attributes;
+        }
+    }
+
     public class XmlBlock {
         // Properties to hold the tag name, attributes, content, and block type
         public string TagName { get; set; }
         public Dictionary<string, string> Attributes { get; set; }
-        public string? Content { get; set; } // Content should stored at close block.
         public XmlBlockType BlockType { get; set; }
+        public string? Content { get; private set; } // Content should stored at close block.
 
-        public XmlBlock (string tagString) {
-            string tagName = string.Empty;
-            Dictionary<string, string> attributes = new Dictionary<string, string>();
-            XmlBlockType blockType;
-
-            // Remove space and '?' in both ends.
-            // Have to remove '?' or it may occurs error when attribute parsing
-            tagString = tagString.Trim().Trim('?');
-            string[] parts = tagString.Split(' ', 2); // Divide the tag part and attribute part.
-
-            // Get tag name
-            tagName = parts[0];
-
-            // Get Xml block type
-            if (tagName == "xml") {
-                blockType = XmlBlockType.Xml;
-            } else if (tagName.StartsWith("/")) {
-                tagName = tagName.Substring(1, tagName.Length - 1);
-                blockType = XmlBlockType.Close;
-            } else {
-                blockType = XmlBlockType.Open;
-            }
-
-            // Get attributes
-            if (parts.Length > 1) {
-                foreach(var element in parts[1].Split(' ')) {
-                    // Get key and value
-                    int position = element.IndexOf("=");
-                    string key = element.Substring(0, position);
-                    string value = element.Substring(position+1);
-
-                    // Check if value is quoted
-                    if (value.StartsWith("\"") && value.EndsWith("\"")) {
-                        value = value.Trim('\"'); // Remove quotes.
-                    } else {
-                        throw new InvalidAttributeException("The value should be quoted by halfwidth colon");
-                    }
-
-                    attributes.Add(key, value);
-                }
-            }
-
-            // Set properties
-            this.TagName = tagName;
-            this.Attributes = attributes;
-            this.BlockType = blockType;
-            this.Content = null;
+        public XmlBlock (string tagName, Dictionary<string, string> attributes, XmlBlockType blockType) {
+            TagName = tagName;
+            Attributes = attributes;
+            BlockType = blockType;
         }
 
-        public void SetContent (string content) {
-            this.Content = content;
-        }
-
-        public void ShowBlockInfo() {
-            // Show tag name, block type
-            Console.WriteLine($"Tag: {this.TagName}, Type: {this.BlockType}");
-
-            // Show attributes
-            if (this.Attributes.Count != 0) {
-                Console.WriteLine("Attributes:");
-                foreach(var kv in this.Attributes) {
-                    Console.WriteLine($"  - {kv.Key}: {kv.Value}");
-                }
-            }
-
-            // Show content.
-            if (!string.IsNullOrWhiteSpace(this.Content)) {
-                Console.WriteLine($"Content: {this.Content}");
-            }
-        }
+        public void SetContent (string content) => Content = content;
     }
 
     public class SimpleXmlValidator
